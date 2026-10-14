@@ -1,0 +1,36 @@
+# ===== 隐私与运行产物（切勿提交个人数据）=====
+
+# 投递结果报告（含个人投递记录：公司、岗位、薪资）
+投递汇总.html
+*投递汇总*.html
+
+# 技能运行目录（信号文件、岗位缓存、投递进度等）
+work/
+output/
+
+# 运行期状态文件（若在工作区直接运行会产生）
+page_state.json
+batch_state.json
+surface_cache.json
+stream_progress.json
+serial_progress.json
+current_jd.json
+decision.json
+jd_to_read.json
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# 说明：
+# user_profile.json / boss_applied.json 在仓库中以「空白模板」形式保留。
+# 若你在本地填写了真实姓名、城市、投递记录等个人信息，提交前请先清空，
+# 或临时追加忽略规则（例如在 .git/info/exclude 中加入文件名），避免隐私外泄。
