@@ -39,9 +39,11 @@ class LiepinAdapter(SiteAdapter):
 
     # ══════════════ 列表 ══════════════
 
+    CITY_CODE = "050090"   # 深圳（猎聘用 dqs 参数过滤城市，实测 city= 无效）
+
     def open_list(self, keyword=None, city="深圳"):
         if keyword:
-            url = "https://www.liepin.com/zhaopin/?key=%s" % quote(keyword)
+            url = "https://www.liepin.com/zhaopin/?key=%s&dqs=%s" % (quote(keyword), self.CITY_CODE)
         else:
             url = self.home
         self.go(url, wait=(8, 10))
