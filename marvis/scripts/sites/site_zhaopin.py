@@ -49,12 +49,23 @@ class ZhaoPinAdapter(SiteAdapter):
     # ══════════════ 列表 ══════════════
 
     def open_list(self, keyword=None, city="深圳"):
-        jl = self.CITY_JL.get(city, "489")
+        """打开职位列表。
+
+        注意: 智联的 `jl` 城市参数不稳定（实测会返回全国职位），
+        因此这里做「城市校验 + 自动回退」: 若搜索结果不含目标城市，
+        则回退到推荐页（推荐页基于账号求职期望，已限定罗湖/深圳）。
+        """
         if keyword:
-            url = "https://www.zhaopin.com/jobs/?kw=%s&jl=%s" % (quote(keyword), jl)
+            url = "https://www.zhaopin.com/jobs/?kw=%s" % quote(keyword)
+            self.go(url, wait=(8, 10))
+            probe = self.extract_cards()[:6]
+            locs = [(c.get("location") or "").replace(" ", "") for c in probe]
+            hit = sum(1 for l in locs if city and city in l)
+            if locs and hit * 2 < len(locs):
+                print("  [智联] 关键词结果仅 %d/%d 条在%s，回退推荐页" % (hit, len(locs), city))
+                self.go(self.home, wait=(8, 10))
         else:
-            url = self.home
-        self.go(url, wait=(8, 10))
+            self.go(self.home, wait=(8, 10))
         return self.count_cards() > 0
 
     def count_cards(self):
