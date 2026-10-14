@@ -35,53 +35,51 @@ class Job51Adapter(SiteAdapter):
 
     # ══════════════ 列表 ══════════════
 
+    CITY_CODE = "040000"   # 深圳
+
     def open_list(self, keyword=None, city="深圳"):
         if keyword:
-            url = "https://we.51job.com/pc/search?keyword=%s" % quote(keyword)
+            url = "https://we.51job.com/pc/search?keyword=%s&jobArea=%s" % (quote(keyword), self.CITY_CODE)
         else:
             url = self.home
         self.go(url, wait=(8, 10))
         return True
 
     def count_cards(self):
-        raw = self.js("document.querySelectorAll(\"a[href*='jobs.51job.com']\").length") or "0"
+        raw = self.js("document.querySelectorAll('.joblist-item').length") or "0"
         try:
             return int(str(raw).split(".")[0])
         except Exception:
             return 0
 
     def extract_cards(self):
-        """从首页推荐位或搜索页提取职位卡片"""
+        """提取搜索页职位卡片（新版 we.51job.com 用 .joblist-item + sensorsdata 属性）"""
         js = r"""
         (function(){
           var out = [];
-          var seen = {};
-          var cards = document.querySelectorAll('.card, .joblist-item, .j_joblist .e, [class*=joblist] li');
-          var push = function(el){
-            var a = el.querySelector("a[href*='jobs.51job.com']");
-            if (!a) return;
-            var href = a.getAttribute('href') || '';
-            var m = href.match(/\/(\d{6,})\.html/);
-            if (!m) return;
-            var jid = m[1];
-            if (seen[jid]) return;
-            seen[jid] = 1;
-            var txt = (el.innerText || '').replace(/\s+/g, ' ').trim();
+          var cards = document.querySelectorAll('.joblist-item');
+          for (var i = 0; i < cards.length; i++) {
+            var c = cards[i];
+            var holder = c.hasAttribute('sensorsdata') ? c : c.querySelector('[sensorsdata]');
+            var raw = holder ? (holder.getAttribute('sensorsdata') || '') : '';
+            var d = {};
+            if (raw) { try { d = JSON.parse(raw); } catch(e) { d = {}; } }
+            var txt = (c.innerText || '').replace(/\s+/g, ' ').trim();
+            var nameEl = c.querySelector('.joblist-item-jobname, .job-name, [class*=jobname]');
+            var salEl = c.querySelector('.joblist-item-right, [class*=sal]');
+            var compEl = c.querySelector('.cname, [class*=company]');
             out.push({
-              job_id: jid,
-              title: (el.querySelector('.jobName, [class*=jobName], .jname, h3') || {}).innerText || txt.slice(0, 40),
-              salary: ((txt.match(/[\d.]+-[\d.]+[万千元·薪]*/) || [''])[0]),
-              company: ((el.querySelector('.cname, [class*=company], .t2') || {}).innerText || '').trim(),
-              location: '',
+              job_id: d.jobId || ('j51-' + i),
+              title: d.jobTitle || (nameEl ? (nameEl.innerText || '').trim() : '') || txt.slice(0, 40),
+              salary: d.jobSalary || (salEl ? (salEl.innerText || '').trim() : ''),
+              company: compEl ? (compEl.innerText || '').trim() : '',
+              location: d.jobArea || '',
+              degree: d.jobDegree || '',
+              year: d.jobYear || '',
               tags: txt.slice(0, 220),
-              url: href.indexOf('http') === 0 ? href : ('https:' + href),
+              url: d.jobId ? ('https://we.51job.com/pc/jobdetail?jobId=' + d.jobId) : '',
               raw: txt.slice(0, 240)
             });
-          };
-          for (var i = 0; i < cards.length; i++) push(cards[i]);
-          if (!out.length) {
-            var as = document.querySelectorAll("a[href*='jobs.51job.com']");
-            for (var j = 0; j < as.length; j++) push(as[j].closest('div,li') || as[j]);
           }
           return JSON.stringify(out);
         })()
@@ -95,13 +93,18 @@ class Job51Adapter(SiteAdapter):
     # ══════════════ 详情 ══════════════
 
     def open_job(self, url_or_id):
-        """51job 详情为独立页面：直接打开"""
+        """51job 详情为独立页面：直接打开
+
+        实测（2026-10）: we.51job.com/pc/jobdetail?jobId= 是 SPA 空壳(无内容)，
+        有效地址为 https://jobs.51job.com/all/{jobId}.html
+        """
         u = str(url_or_id)
         if u.startswith("http"):
             url = u
         else:
-            url = "https://jobs.51job.com/%s.html" % u
-        self.go(url, wait=(8, 10))
+            url = "https://jobs.51job.com/all/%s.html" % u
+        self.go(url, wait=(9, 11))
+        time.sleep(1.5)
         return "jobs.51job.com" in self.current_url()
 
     def read_jd(self):
