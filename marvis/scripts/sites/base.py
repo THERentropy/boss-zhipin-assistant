@@ -33,12 +33,51 @@ if SKILL_DIR not in sys.path:
 from scripts.webbridge_client import api, evaluate, navigate, scroll_page, SESSION
 
 
+# ══════════════ 地址黑名单 ══════════════
+# 与 user_profile.json 的「地址黑名单」保持一致，供各站点在采集/读 JD 阶段统一过滤。
+# 说明: 福田区信息枢纽大厦聚集电话客服外包与中介招聘，用户明确要求不投。
+ADDRESS_BLACKLIST = [
+    "信息枢纽大厦",
+]
+
+# 通勤过远的区域（罗湖出发约 50 分钟以上）
+DISTRICT_BLACKLIST = [
+    "宝安", "光明", "坪山", "大鹏", "葵涌", "深汕",
+]
+
+
+def is_blacklisted_address(address):
+    """地址是否命中黑名单（地址黑名单 or 远郊区域）"""
+    if not address:
+        return False
+    addr = str(address)
+    for kw in ADDRESS_BLACKLIST:
+        if kw in addr:
+            return True
+    return False
+
+
+def is_far_district(address):
+    """地址是否位于通勤过远的区域"""
+    if not address:
+        return False
+    addr = str(address)
+    for kw in DISTRICT_BLACKLIST:
+        if kw in addr:
+            return True
+    return False
+
+
 class SiteAdapter(object):
     """站点适配器基类"""
 
     name = "base"
     display = "base"
     home = ""
+
+    # 子类可覆盖；默认使用模块级黑名单
+    address_blacklist = ADDRESS_BLACKLIST
+    district_blacklist = DISTRICT_BLACKLIST
 
     def __init__(self, session=SESSION):
         self.session = session
