@@ -170,51 +170,59 @@ class ZhaoPinAdapter(SiteAdapter):
         return ("已投递" in txt) or ("已申请" in txt)
 
     def apply(self, job_id=None):
-        """点击「立即投递」；返回 (status, detail)"""
-        # 检查是否已投递
-        if self.has_applied():
-            return "skip", "页面显示已投递"
+        """点击「立即投递」→ 等待结果弹窗 → 点击「留在此页」
+
+        实测（2026-10-14）成功文案:
+          弹窗 "已向对方发送简历和打招呼语"，按钮由「立即投递」变为「继续沟通」
+        """
+        # 已是沟通/已投递状态
+        btn = self.js(
+            "(function(){var b=document.querySelector('.job-detail-summary__apply');"
+            "return b?b.innerText.trim():'';})()"
+        ) or ""
+        if ("继续沟通" in btn) or ("已投递" in btn) or ("已申请" in btn):
+            return "skip", "当前已是「%s」状态" % btn
 
         r = self.js(r"""
         (function(){
           var b = document.querySelector('.job-detail-summary__apply');
           if (!b) return 'no_button';
-          var t = (b.innerText || '').trim();
-          if (t.indexOf('已投递') >= 0 || t.indexOf('已申请') >= 0) return 'already:' + t;
           b.scrollIntoView({block: 'center'});
           b.click();
-          return 'clicked:' + t;
+          return 'clicked:' + (b.innerText || '').trim();
         })()
         """) or "no_button"
 
-        if r.startswith("already:"):
-            return "skip", r
         if r == "no_button":
-            return "fail", "未找到立即投递按钮"
+            return "fail", "未找到「立即投递」按钮"
         if not r.startswith("clicked:"):
             return "unknown", "点击返回: %s" % r
 
         time.sleep(2.5)
 
-        # 处理可能的确认弹窗
-        confirm = self.js(r"""
+        # 检测投递结果弹窗（智联文案：已向对方发送简历和打招呼语）
+        sent = self.js(r"""
         (function(){
-          var btns = document.querySelectorAll('button, a, div[class*=btn], span[class*=btn]');
-          for (var i = 0; i < btns.length; i++) {
-            var el = btns[i];
-            if (el.children.length > 0) continue;
-            var t = (el.textContent || '').trim();
-            if (t === '确认投递' || t === '确定' || t === '确认' || t === '继续投递') {
-              var r = el.getBoundingClientRect();
-              if (r.width > 0 && r.height > 0) { el.click(); return 'confirmed:' + t; }
-            }
-          }
-          return 'no_confirm';
+          var t = document.body ? document.body.innerText : '';
+          if (t.indexOf('已向对方发送简历') >= 0) return 'sent_popup';
+          if (t.indexOf('发送简历') >= 0 && t.indexOf('打招呼') >= 0) return 'sent_text';
+          if (t.indexOf('投递成功') >= 0) return 'sent_success';
+          return '';
         })()
-        """) or "no_confirm"
+        """) or ""
 
-        time.sleep(1.5)
-        txt = self.page_text()
-        if "投递成功" in txt or "已投递" in txt or "已申请" in txt or confirm.startswith("confirmed:"):
-            return "success", "投递成功 (%s / %s)" % (r, confirm)
-        return "unknown", "点击后未检测到成功标志 (%s / %s)" % (r, confirm)
+        # 点击「留在此页」——绝不可点「继续沟通」（会跳转聊天页）
+        stay = self.click_text("留在此页", "button, a, div, span")
+        time.sleep(1.0)
+
+        # 复核按钮状态
+        btn2 = self.js(
+            "(function(){var b=document.querySelector('.job-detail-summary__apply');"
+            "return b?b.innerText.trim():'';})()"
+        ) or ""
+
+        if sent:
+            return "success", "投递成功(%s; 按钮→%s; %s)" % (sent, btn2 or "?", stay)
+        if "继续沟通" in btn2:
+            return "success", "投递成功(按钮已变为继续沟通; %s)" % stay
+        return "unknown", "点击后未检测到成功标志 (btn=%s; stay=%s)" % (btn2 or "?", stay)

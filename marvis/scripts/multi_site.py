@@ -81,8 +81,10 @@ def main():
         result["cards"] = cards
 
     elif args.action == "read":
-        # 智联等「同页双栏」站点需先打开列表页，才能点击卡片
-        if not str(args.target).startswith("http"):
+        # 智联等「同页双栏」站点需先打开列表页，才能点击卡片。
+        # 但 target 为 zp-<index> 时说明页面已是刚采集的列表页，不能再刷新（否则索引错位）。
+        t = str(args.target)
+        if not t.startswith("http") and not t.startswith("zp-"):
             kw = _read_keyword(args.keyword_file)
             result["list_opened"] = ad.open_list(keyword=kw)
         ok = ad.open_job(args.target)
@@ -91,7 +93,8 @@ def main():
         result.update({"ok": ok, "jd": jd, "meta": meta})
 
     elif args.action == "apply":
-        if not str(args.target).startswith("http"):
+        t = str(args.target)
+        if not t.startswith("http") and not t.startswith("zp-"):
             kw = _read_keyword(args.keyword_file)
             result["list_opened"] = ad.open_list(keyword=kw)
         ok = ad.open_job(args.target)

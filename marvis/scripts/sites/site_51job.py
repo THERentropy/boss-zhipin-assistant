@@ -187,7 +187,13 @@ class Job51Adapter(SiteAdapter):
         """) or "no_confirm"
 
         time.sleep(1.5)
+
+        # 实测：51job 投递成功后会跳转到 applysuccess.php?jobid=xxx
+        url = self.current_url()
+        if "applysuccess" in url:
+            return "success", "投递成功(跳转至 %s)" % url.split("?")[0]
+
         txt2 = self.page_text()
-        if "投递成功" in txt2 or "已投递" in txt2 or confirm.startswith("confirmed:"):
+        if ("投递成功" in txt2) or ("申请成功" in txt2) or ("简历已发送" in txt2) or confirm.startswith("confirmed:"):
             return "success", "投递成功 (%s / %s)" % (r, confirm)
         return "unknown", "未检测到成功标志 (%s / %s)" % (r, confirm)

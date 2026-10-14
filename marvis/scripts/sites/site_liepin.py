@@ -204,7 +204,22 @@ class LiepinAdapter(SiteAdapter):
         """) or "no_confirm"
 
         time.sleep(1.5)
+
+        # 实测：猎聘「聊一聊」成功后会弹出聊天窗口(class 含 ant-im-modal)，
+        # 页面按钮变为「继续聊」，并出现"打招呼"/消息记录。
+        chat = self.js(
+            "(function(){var m=document.querySelector('.ant-im-modal, [class*=ant-im-modal], [class*=im-ui-chat]');"
+            "return m ? 'chat_open' : '';})()"
+        ) or ""
+        btn_after = self.js(
+            "(function(){var a=document.querySelector('.apply-box');"
+            "return a?(a.innerText||'').trim():'';})()"
+        ) or ""
         txt2 = self.page_text()
-        if "投递成功" in txt2 or "已投递" in txt2 or confirm.startswith("confirmed:"):
+
+        if chat or ("继续聊" in btn_after) or ("继续聊" in txt2):
+            return "success", "已发起沟通(聊天窗=%s; 按钮=%s)" % (chat or "-", btn_after or "-")
+
+        if ("投递成功" in txt2) or ("已投递" in txt2) or confirm.startswith("confirmed:"):
             return "success", "投递成功 (%s / %s)" % (r, confirm)
         return "unknown", "未检测到成功标志 (%s / %s)" % (r, confirm)
