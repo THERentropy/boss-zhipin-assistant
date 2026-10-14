@@ -316,6 +316,18 @@ def step_apply(index):
     # APPROVE → 投递
     ad = get_adapter(site)
     ad.enable_focus()
+
+    # 人机验证拦截检测：若被拦截则等待真人完成（默认最长 5 分钟），
+    # 通过后流程自动继续，无需重跑。
+    try:
+        from scripts.verify_watch import ensure_no_verify, human_delay
+        if not ensure_no_verify(timeout=300, adapter_name=site):
+            print("[投递] 已暂停：人机验证未完成，请完成后重跑本步")
+            return False
+    except Exception as _e:
+        print("[投递] 验证检测跳过: %s" % _e)
+        human_delay = None
+
     target = job.get("job_id")
     if not str(target).startswith("http") and not str(target).startswith("zp-"):
         ad.open_list(keyword=None)
@@ -333,6 +345,13 @@ def step_apply(index):
     entry["status"] = status
     entry["detail"] = detail
     state["processed"].append(entry)
+
+    # 拟人化节奏：随机间隔，降低触发平台风控/验证的概率
+    try:
+        if human_delay:
+            human_delay(2.5, 6.5)
+    except Exception:
+        pass
 
     if status == "success":
         state["delivered"].append({
