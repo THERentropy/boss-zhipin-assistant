@@ -14,15 +14,3 @@
    - 📥 插件下载地址：[https://www.kimi.com/zh-cn/features/webbridge](https://www.kimi.com/zh-cn/features/webbridge)
 4. **智能体配置**：必须在你的智能体（Agent）中提前安装好 `Kimi WebBridge` 的 SKILL。
 5. **数据配置**：根目录下的 `user_profile.json` 和 `boss_applied.json` 为空数据模板，通过与agent的对话不断更新丰富规则，越投越准。所以再次强调，不要海投，投几个它汇报结果后您再微调效率会更高。
-
----
-
-## ☕ 支持与打赏
-
-如果这个小工具帮你节省了海量的时间，或者助你顺利拿到了心仪的 Offer，欢迎给作者打赏一杯咖啡！你的支持是我持续维护和优化的最大动力。
-
-<div align="center">
-  <img src="assets/tip_wechat.jpg" width="280" alt="微信打赏"/>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/tip_alipay.jpg" width="280" alt="支付宝打赏"/>
-</div>
